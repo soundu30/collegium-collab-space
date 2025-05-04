@@ -1,6 +1,5 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 type User = {
@@ -19,6 +18,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
   logout: () => void;
+  navigateToPath: (path: string) => void;
 }
 
 interface RegisterData {
@@ -32,10 +32,17 @@ interface RegisterData {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface AuthProviderProps {
+  children: React.ReactNode;
+  onNavigate: (path: string) => void;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ 
+  children, 
+  onNavigate 
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const navigate = useNavigate();
   
   // Check for stored user on initial load
   useEffect(() => {
@@ -52,6 +59,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
   }, []);
+  
+  // Navigation method that can be called from inside auth context
+  const navigateToPath = (path: string) => {
+    onNavigate(path);
+  };
   
   // Mock login function (in a real app this would connect to an API)
   const login = async (email: string, password: string) => {
@@ -75,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAuthenticated(true);
         localStorage.setItem('collegium-user', JSON.stringify(mockUser));
         toast.success('Login successful!');
-        navigate('/dashboard');
+        navigateToPath('/dashboard');
       } else {
         // For demo purposes, allow any email with valid format
         if (email.includes('@') && password.length >= 6) {
@@ -92,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setIsAuthenticated(true);
           localStorage.setItem('collegium-user', JSON.stringify(mockUser));
           toast.success('Login successful!');
-          navigate('/dashboard');
+          navigateToPath('/dashboard');
         } else {
           toast.error('Invalid credentials. Please try again.');
         }
@@ -122,7 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAuthenticated(true);
       localStorage.setItem('collegium-user', JSON.stringify(newUser));
       toast.success('Registration successful!');
-      navigate('/dashboard');
+      navigateToPath('/dashboard');
     } catch (error) {
       console.error("Registration error:", error);
       toast.error('Registration failed. Please try again.');
@@ -135,7 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAuthenticated(false);
     localStorage.removeItem('collegium-user');
     toast.success('Logged out successfully');
-    navigate('/');
+    navigateToPath('/');
   };
   
   const value = {
@@ -143,7 +155,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated,
     login,
     register,
-    logout
+    logout,
+    navigateToPath
   };
   
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
