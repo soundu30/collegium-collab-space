@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar as CalendarIcon, Plus, MapPin, Globe, Users, ExternalLink, Calendar } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, MapPin, Globe, Users, ExternalLink } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -302,7 +302,7 @@ const Events: React.FC = () => {
       
       {sortedEvents.length === 0 ? (
         <div className="text-center py-12">
-          <Calendar className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+          <CalendarIcon className="h-12 w-12 mx-auto text-gray-300 mb-4" />
           <h3 className="text-xl font-medium text-gray-600 mb-2">No events found</h3>
           <p className="text-gray-500 max-w-md mx-auto">
             {searchQuery
@@ -329,7 +329,7 @@ const Events: React.FC = () => {
             <h2 className="text-xl font-bold">Upcoming Events</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {sortedEvents.filter(event => isUpcoming(event.date)).map(event => {
-                const organizer = getUser(event.organizerId);
+                const organizer = getUser(event.organizer);
                 
                 return (
                   <Card key={event.id} className="card-hover overflow-hidden">
@@ -411,7 +411,7 @@ const Events: React.FC = () => {
               <h2 className="text-xl font-bold">Past Events</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {sortedEvents.filter(event => !isUpcoming(event.date)).map(event => {
-                  const organizer = getUser(event.organizerId);
+                  const organizer = getUser(event.organizer);
                   
                   return (
                     <Card key={event.id} className="bg-gray-50 overflow-hidden opacity-80">

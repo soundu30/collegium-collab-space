@@ -36,10 +36,10 @@ import {
   Plus, 
   Star, 
   File,
-  FilePdf,
-  FileImage,
-  FileArchive,
-  FileSpreadsheet,
+  FileType,
+  Image,
+  Archive,
+  Table,
   FileText as FileTextIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -121,18 +121,18 @@ const Resources: React.FC = () => {
   const getFileIcon = (fileType: string) => {
     switch (fileType.toLowerCase()) {
       case 'pdf':
-        return <FilePdf className="h-8 w-8 text-red-500" />;
+        return <FileType className="h-8 w-8 text-red-500" />;
       case 'jpg':
       case 'png':
       case 'jpeg':
       case 'gif':
-        return <FileImage className="h-8 w-8 text-blue-500" />;
+        return <Image className="h-8 w-8 text-blue-500" />;
       case 'zip':
       case 'rar':
-        return <FileArchive className="h-8 w-8 text-yellow-500" />;
+        return <Archive className="h-8 w-8 text-yellow-500" />;
       case 'xlsx':
       case 'csv':
-        return <FileSpreadsheet className="h-8 w-8 text-green-500" />;
+        return <Table className="h-8 w-8 text-green-500" />;
       case 'doc':
       case 'docx':
         return <FileTextIcon className="h-8 w-8 text-blue-600" />;
