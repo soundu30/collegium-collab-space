@@ -173,8 +173,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       }
 
       if (data.user) {
-        toast.success('Registration successful!');
-        navigateToPath('/dashboard');
+        // Create the profile
+        const profileData = {
+          id: data.user.id,
+          name: userData.name,
+          email: userData.email,
+          college: userData.college,
+          major: userData.major,
+          interests: userData.interests,
+        };
+
+        // Insert the profile into the profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert(profileData);
+
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+          toast.error('Profile creation failed. Please try again.');
+        } else {
+          toast.success('Registration successful!');
+          navigateToPath('/dashboard');
+        }
       }
     } catch (error) {
       console.error('Registration error:', error);

@@ -7,11 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const { login, isAuthenticated } = useAuth();
   
@@ -24,12 +27,20 @@ const Login: React.FC = () => {
     }
     
     setIsLoading(true);
+    setError(null);
     
     try {
       await login(email, password);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
-      // Toast is shown in the login function on error
+      setError(error?.message || 'Login failed');
+      
+      // Display more user-friendly messages for common errors
+      if (error?.message?.includes('Email not confirmed')) {
+        setError('Please confirm your email address before logging in. Check your inbox for a confirmation email.');
+      } else if (error?.message?.includes('Invalid login credentials')) {
+        setError('Invalid email or password. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -47,6 +58,13 @@ const Login: React.FC = () => {
             <h1 className="text-2xl font-bold text-collegium-primary">Welcome Back</h1>
             <p className="mt-2 text-gray-600">Login to access your Collegium account</p>
           </div>
+          
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
           
           <form onSubmit={handleSubmit} className="mt-8 space-y-6">
             <div className="space-y-4">

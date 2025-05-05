@@ -1,7 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { SupabaseQueryOptions, SupabaseQueryResult } from '@/types/supabase';
+import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
 
 export function useSupabaseQuery<T>({
   table,
@@ -26,9 +26,9 @@ export function useSupabaseQuery<T>({
       setIsLoading(true);
       try {
         // Type assertion to handle the dynamic table query
-        let query = supabase
+        let query: PostgrestFilterBuilder<any, any, any> = supabase
           .from(table)
-          .select(columns as any);
+          .select(columns);
         
         // Apply filters
         filters.forEach(filter => {
@@ -97,9 +97,9 @@ export function useSupabaseQuery<T>({
     setIsLoading(true);
     try {
       // Type assertion to handle the dynamic table query
-      let query = supabase
+      let query: PostgrestFilterBuilder<any, any, any> = supabase
         .from(table)
-        .select(columns as any);
+        .select(columns);
       
       // Apply filters
       filters.forEach(filter => {
