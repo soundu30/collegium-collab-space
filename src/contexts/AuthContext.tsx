@@ -3,16 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
-
-type Profile = {
-  id: string;
-  name: string;
-  email: string;
-  college: string;
-  major: string;
-  interests: string[];
-  avatar_url?: string;
-};
+import { Profile } from '@/types/supabase';
 
 interface AuthContextType {
   user: User | null;

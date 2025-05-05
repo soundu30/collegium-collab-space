@@ -25,9 +25,10 @@ export function useSupabaseQuery<T>({
     const fetchData = async () => {
       setIsLoading(true);
       try {
+        // Type assertion to handle the dynamic table query
         let query = supabase
           .from(table)
-          .select(columns);
+          .select(columns as any);
         
         // Apply filters
         filters.forEach(filter => {
@@ -95,9 +96,10 @@ export function useSupabaseQuery<T>({
   const refetch = async () => {
     setIsLoading(true);
     try {
+      // Type assertion to handle the dynamic table query
       let query = supabase
         .from(table)
-        .select(columns);
+        .select(columns as any);
       
       // Apply filters
       filters.forEach(filter => {

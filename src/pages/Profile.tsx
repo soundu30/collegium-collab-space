@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Profile: React.FC = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, profile, isAuthenticated, updateProfile } = useAuth();
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
@@ -26,29 +26,44 @@ const Profile: React.FC = () => {
   
   // Set initial data from user context
   useEffect(() => {
-    if (user) {
+    if (profile) {
       setProfileData({
-        name: user.name || '',
-        email: user.email || '',
-        college: user.college || '',
-        major: user.major || '',
-        interests: user.interests ? user.interests.join(', ') : '',
+        name: profile.name || '',
+        email: user?.email || '',
+        college: profile.college || '',
+        major: profile.major || '',
+        interests: profile.interests ? profile.interests.join(', ') : '',
         bio: '',
       });
     }
-  }, [user]);
+  }, [profile, user]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setProfileData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // In a real app, this would send data to an API
-    toast.success('Profile updated successfully!');
-    setIsEditing(false);
+    try {
+      // Parse interests from comma-separated string to array
+      const interests = profileData.interests
+        ? profileData.interests.split(',').map(item => item.trim())
+        : [];
+      
+      await updateProfile({
+        name: profileData.name,
+        college: profileData.college,
+        major: profileData.major,
+        interests,
+      });
+      
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast.error('Failed to update profile');
+    }
   };
   
   // Get initials for avatar fallback
@@ -77,14 +92,14 @@ const Profile: React.FC = () => {
               </CardHeader>
               <CardContent className="flex flex-col items-center">
                 <Avatar className="h-24 w-24 mb-4">
-                  <AvatarImage src={user?.avatar} alt={user?.name} />
+                  <AvatarImage src={profile?.avatar_url} alt={profile?.name} />
                   <AvatarFallback className="text-xl">
-                    {user?.name ? getInitials(user.name) : 'U'}
+                    {profile?.name ? getInitials(profile.name) : 'U'}
                   </AvatarFallback>
                 </Avatar>
                 
                 <div className="text-center space-y-1 mb-4">
-                  <h3 className="text-xl font-bold">{user?.name}</h3>
+                  <h3 className="text-xl font-bold">{profile?.name}</h3>
                   <p className="text-gray-500">{user?.email}</p>
                 </div>
                 

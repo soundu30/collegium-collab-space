@@ -14,7 +14,7 @@ import { Menu, User, LogOut, MessageSquare, Calendar, BookOpen, File, Home } fro
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const Header: React.FC = () => {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, profile, logout } = useAuth();
   const location = useLocation();
   
   const navItems = [
@@ -68,14 +68,14 @@ const Header: React.FC = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={user?.avatar} alt={user?.name} />
-                      <AvatarFallback>{user?.name ? getInitials(user.name) : 'US'}</AvatarFallback>
+                      <AvatarImage src={profile?.avatar_url} alt={profile?.name} />
+                      <AvatarFallback>{profile?.name ? getInitials(profile.name) : 'US'}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end">
                   <div className="p-2 text-sm font-medium border-b">
-                    <div>{user?.name}</div>
+                    <div>{profile?.name}</div>
                     <div className="text-xs text-muted-foreground">{user?.email}</div>
                   </div>
                   <DropdownMenuItem asChild>

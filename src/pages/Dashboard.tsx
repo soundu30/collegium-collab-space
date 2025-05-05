@@ -9,7 +9,7 @@ import { Calendar, Clock, MessageSquare, Users, FileText, BookOpen, ArrowRight }
 import { mockEvents, mockForumTopics, mockResources } from '@/lib/data';
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   
   // Get upcoming events (sorted by date)
   const upcomingEvents = [...mockEvents]
@@ -44,7 +44,7 @@ const Dashboard: React.FC = () => {
       <div className="mb-8">
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            Welcome back, {user?.name?.split(' ')[0] || 'Student'}!
+            Welcome back, {profile?.name?.split(' ')[0] || 'Student'}!
           </h2>
           <p className="text-gray-600">
             Here's what's happening in your academic community today.
@@ -220,17 +220,17 @@ const Dashboard: React.FC = () => {
             <div className="space-y-3">
               <div>
                 <h4 className="text-sm font-medium text-gray-500">College/University</h4>
-                <p className="text-gray-900">{user?.college || 'Not specified'}</p>
+                <p className="text-gray-900">{profile?.college || 'Not specified'}</p>
               </div>
               <div>
                 <h4 className="text-sm font-medium text-gray-500">Major</h4>
-                <p className="text-gray-900">{user?.major || 'Not specified'}</p>
+                <p className="text-gray-900">{profile?.major || 'Not specified'}</p>
               </div>
               <div>
                 <h4 className="text-sm font-medium text-gray-500">Interests</h4>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {user?.interests && user.interests.length > 0 ? (
-                    user.interests.map((interest, index) => (
+                  {profile?.interests && profile.interests.length > 0 ? (
+                    profile.interests.map((interest, index) => (
                       <span key={index} className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
                         {interest}
                       </span>
