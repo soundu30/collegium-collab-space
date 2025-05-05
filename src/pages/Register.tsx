@@ -64,7 +64,7 @@ const Register: React.FC = () => {
       });
     } catch (error) {
       console.error('Registration error:', error);
-      toast.error('Registration failed. Please try again.');
+      // Toast is shown in the register function on error
     } finally {
       setIsLoading(false);
     }

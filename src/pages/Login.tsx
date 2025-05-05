@@ -29,7 +29,7 @@ const Login: React.FC = () => {
       await login(email, password);
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('Login failed. Please check your credentials and try again.');
+      // Toast is shown in the login function on error
     } finally {
       setIsLoading(false);
     }
@@ -93,12 +93,6 @@ const Login: React.FC = () => {
               >
                 {isLoading ? 'Logging in...' : 'Sign in'}
               </Button>
-            </div>
-            
-            {/* Demo account notice */}
-            <div className="text-sm text-gray-500 text-center border-t pt-4 mt-4">
-              <p>Demo Account: <strong>demo@college.edu</strong></p>
-              <p>Password: <strong>password123</strong></p>
             </div>
           </form>
           

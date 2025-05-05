@@ -3,6 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from './Header';
+import { Spinner } from './ui/spinner';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -15,17 +16,27 @@ const Layout: React.FC<LayoutProps> = ({
   requiresAuth = false,
   title
 }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   
   // Redirect if authentication is required but user is not authenticated
   React.useEffect(() => {
-    if (requiresAuth && !isAuthenticated) {
+    if (requiresAuth && !isLoading && !isAuthenticated) {
       navigate('/login', { replace: true });
     }
-  }, [requiresAuth, isAuthenticated, navigate]);
+  }, [requiresAuth, isAuthenticated, isLoading, navigate]);
   
-  // If authentication check is in progress, show nothing
+  // If authentication check is in progress, show loading
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <Spinner className="h-8 w-8" />
+        <p className="mt-4 text-gray-600">Loading...</p>
+      </div>
+    );
+  }
+  
+  // If authentication is required and user is not authenticated, show nothing
   if (requiresAuth && !isAuthenticated) {
     return null;
   }
