@@ -49,6 +49,8 @@ const Register: React.FC = () => {
     setIsLoading(true);
     
     try {
+      console.log("Submitting registration form");
+      
       // Split interests string into array
       const interests = formData.interests
         ? formData.interests.split(',').map(i => i.trim())
@@ -62,6 +64,9 @@ const Register: React.FC = () => {
         major: formData.major,
         interests,
       });
+      
+      console.log("Registration function completed");
+      
     } catch (error) {
       console.error('Registration error:', error);
       // Toast is shown in the register function on error

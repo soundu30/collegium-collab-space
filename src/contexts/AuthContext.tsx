@@ -102,6 +102,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     // Set up the auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        console.log("Auth state changed:", event, currentSession?.user?.id);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         setIsAuthenticated(!!currentSession);
@@ -149,10 +150,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     }
   };
   
-  // Register function with Supabase
+  // Register function with Supabase - fixed to create profile properly
   const register = async (userData: RegisterData) => {
     try {
       setIsLoading(true);
+      console.log("Starting registration with data:", userData);
       
       // Sign up the user
       const { data, error } = await supabase.auth.signUp({
@@ -173,25 +175,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
       }
 
       if (data.user) {
-        // Create the profile
+        console.log("User created:", data.user.id);
+        // Create the profile manually (even though trigger should handle this)
         const profileData = {
           id: data.user.id,
           name: userData.name,
           email: userData.email,
-          college: userData.college,
-          major: userData.major,
-          interests: userData.interests,
+          college: userData.college || '',
+          major: userData.major || '',
+          interests: userData.interests || [],
         };
 
+        console.log("Creating profile with data:", profileData);
+        
         // Insert the profile into the profiles table
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert(profileData);
+          .upsert(profileData);
 
         if (profileError) {
           console.error('Error creating profile:', profileError);
-          toast.error('Profile creation failed. Please try again.');
+          toast.error('Profile creation failed but account created. Please update your profile later.');
         } else {
+          console.log("Profile created successfully");
+          // Update local profile state
+          setProfile(profileData as Profile);
           toast.success('Registration successful!');
           navigateToPath('/dashboard');
         }
