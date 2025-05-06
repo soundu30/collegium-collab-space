@@ -5,43 +5,107 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Send, Search, MessageSquare as MessageIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockUsers, mockConversations, getConversations, getMessages, getUser } from '@/lib/data';
-import { User, Message } from '@/lib/data';
+import { mockUsers, getUser } from '@/lib/data';
+import { getCollection, addItem, generateId } from '@/utils/localStorageDB';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  college: string;
+  major: string;
+  avatar?: string;
+}
+
+interface Message {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  sentAt: string;
+  isRead: boolean;
+}
+
+interface Conversation {
+  id: string;
+  participants: string[];
+  lastMessage: string;
+  lastMessageAt: string;
+  unreadCount: number;
+}
 
 const MessagesPage: React.FC = () => {
-  const { user: currentUser } = useAuth();
+  const { user, profile } = useAuth();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [newMessage, setNewMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   
-  // Get conversations on load
+  // Load conversations and messages on component mount
   useEffect(() => {
-    if (currentUser?.id) {
-      const userConversations = getConversations(currentUser.id);
+    if (user?.id) {
+      // Load conversations
+      const storedConversations = getCollection<Conversation>('conversations');
+      const userConversations = storedConversations.filter(
+        conv => conv.participants.includes(user.id)
+      );
       setConversations(userConversations);
+      
+      // Load messages for selected user if any
+      if (selectedUser) {
+        loadMessages(selectedUser.id);
+      }
     }
-  }, [currentUser?.id]);
+  }, [user?.id, selectedUser?.id]);
   
-  // Get messages when a user is selected
-  useEffect(() => {
-    if (currentUser?.id && selectedUser?.id) {
-      const userMessages = getMessages(currentUser.id, selectedUser.id);
-      setMessages(userMessages);
-    }
-  }, [currentUser?.id, selectedUser?.id]);
+  // Load messages between current user and selected user
+  const loadMessages = (userId: string) => {
+    if (!user?.id) return;
+    
+    const allMessages = getCollection<Message>('messages');
+    const chatMessages = allMessages.filter(
+      msg => 
+        (msg.senderId === user.id && msg.receiverId === userId) || 
+        (msg.senderId === userId && msg.receiverId === user.id)
+    );
+    
+    // Sort by sent time
+    chatMessages.sort((a, b) => 
+      new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime()
+    );
+    
+    setMessages(chatMessages);
+    
+    // Mark messages as read
+    const updatedMessages = allMessages.map(msg => 
+      msg.senderId === userId && msg.receiverId === user.id && !msg.isRead
+        ? { ...msg, isRead: true }
+        : msg
+    );
+    
+    // Update unread count in conversations
+    const updatedConversations = conversations.map(conv => 
+      conv.participants.includes(userId)
+        ? { ...conv, unreadCount: 0 }
+        : conv
+    );
+    
+    // Save back to localStorage
+    localStorage.setItem('collegium_messages', JSON.stringify(updatedMessages));
+    localStorage.setItem('collegium_conversations', JSON.stringify(updatedConversations));
+    
+    setConversations(updatedConversations);
+  };
   
   // Filter users by search query
   const filteredUsers = mockUsers.filter(u => 
-    u.id !== currentUser?.id && 
+    u.id !== user?.id && 
     (u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
      u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
      u.college.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -50,37 +114,78 @@ const MessagesPage: React.FC = () => {
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!newMessage.trim() || !selectedUser) {
+    if (!newMessage.trim() || !selectedUser || !user?.id) {
       return;
     }
     
-    // In a real app, this would send the message to an API
-    const tempMessage: Message = {
-      id: `temp-${Date.now()}`,
-      senderId: currentUser?.id || '',
-      receiverId: selectedUser.id,
-      content: newMessage,
-      sentAt: new Date().toISOString(),
-      isRead: false
-    };
-    
-    setMessages([...messages, tempMessage]);
-    setNewMessage('');
-    toast.success('Message sent!');
-    
-    // Check if this is a new conversation
-    const existingConv = conversations.find(c => c.participants.includes(selectedUser.id));
-    
-    if (!existingConv) {
-      const newConv = {
-        id: `temp-${Date.now()}`,
-        participants: [currentUser?.id || '', selectedUser.id],
-        lastMessage: newMessage,
-        lastMessageAt: new Date().toISOString(),
-        unreadCount: 0
+    try {
+      // Create new message
+      const newMsg: Message = {
+        id: generateId(),
+        senderId: user.id,
+        receiverId: selectedUser.id,
+        content: newMessage,
+        sentAt: new Date().toISOString(),
+        isRead: false
       };
       
-      setConversations([newConv, ...conversations]);
+      // Add message to storage
+      const allMessages = getCollection<Message>('messages');
+      const updatedMessages = [...allMessages, newMsg];
+      localStorage.setItem('collegium_messages', JSON.stringify(updatedMessages));
+      
+      // Update local state
+      setMessages([...messages, newMsg]);
+      
+      // Update or create conversation
+      const allConversations = getCollection<Conversation>('conversations');
+      
+      // Check if conversation exists
+      const existingConvIndex = allConversations.findIndex(
+        c => c.participants.includes(user.id) && c.participants.includes(selectedUser.id)
+      );
+      
+      if (existingConvIndex >= 0) {
+        // Update existing conversation
+        const updatedConversations = [...allConversations];
+        updatedConversations[existingConvIndex] = {
+          ...updatedConversations[existingConvIndex],
+          lastMessage: newMessage,
+          lastMessageAt: new Date().toISOString()
+        };
+        
+        localStorage.setItem('collegium_conversations', JSON.stringify(updatedConversations));
+        
+        // Update state
+        const userConversations = updatedConversations.filter(
+          conv => conv.participants.includes(user.id)
+        );
+        setConversations(userConversations);
+      } else {
+        // Create new conversation
+        const newConv: Conversation = {
+          id: generateId(),
+          participants: [user.id, selectedUser.id],
+          lastMessage: newMessage,
+          lastMessageAt: new Date().toISOString(),
+          unreadCount: 0
+        };
+        
+        const updatedConversations = [...allConversations, newConv];
+        localStorage.setItem('collegium_conversations', JSON.stringify(updatedConversations));
+        
+        // Update state
+        const userConversations = updatedConversations.filter(
+          conv => conv.participants.includes(user.id)
+        );
+        setConversations(userConversations);
+      }
+      
+      // Clear input
+      setNewMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error('Failed to send message');
     }
   };
   
@@ -162,6 +267,7 @@ const MessagesPage: React.FC = () => {
                       onClick={() => {
                         setSelectedUser(user);
                         setSearchQuery('');
+                        loadMessages(user.id);
                       }}
                     >
                       <Avatar>
@@ -190,17 +296,23 @@ const MessagesPage: React.FC = () => {
                 ) : (
                   conversations.map(conv => {
                     // Find the other participant (not current user)
-                    const otherParticipantId = conv.participants.find((id: string) => id !== currentUser?.id);
-                    const otherUser = getUser(otherParticipantId);
-                    
-                    if (!otherUser) return null;
+                    const otherParticipantId = conv.participants.find(id => id !== user?.id);
+                    const otherUser = getUser(otherParticipantId || '') || { 
+                      name: 'Unknown User',
+                      id: 'unknown',
+                      college: '',
+                      avatar: ''
+                    };
                     
                     return (
                       <button
                         key={conv.id}
                         className={`w-full px-3 py-3 flex items-center space-x-3 hover:bg-gray-50 transition-colors
                           ${selectedUser?.id === otherUser.id ? 'bg-gray-50' : ''}`}
-                        onClick={() => setSelectedUser(otherUser)}
+                        onClick={() => {
+                          setSelectedUser(otherUser);
+                          loadMessages(otherUser.id);
+                        }}
                       >
                         <Avatar>
                           <AvatarImage src={otherUser.avatar} alt={otherUser.name} />
@@ -254,7 +366,7 @@ const MessagesPage: React.FC = () => {
                     </div>
                   ) : (
                     messages.map((message) => {
-                      const isSender = message.senderId === currentUser?.id;
+                      const isSender = message.senderId === user?.id;
                       
                       return (
                         <div 

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,14 +43,34 @@ import {
   FileText as FileTextIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { mockResources, getUser } from '@/lib/data';
+import { mockUsers, getUser } from '@/lib/data';
 import { useAuth } from '@/contexts/AuthContext';
+import { getCollection, addItem, generateId } from '@/utils/localStorageDB';
+
+// Define the resource type
+interface Resource {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  fileType: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  uploadedBy: string;
+  uploadedAt: string;
+  rating: number;
+  tags: string[];
+  downloadCount: number;
+}
 
 const Resources: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [resourceDialogOpen, setResourceDialogOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [resources, setResources] = useState<Resource[]>([]);
   const [newResource, setNewResource] = useState({
     title: '',
     description: '',
@@ -71,8 +91,14 @@ const Resources: React.FC = () => {
     'Physics'
   ];
   
+  // Load resources on component mount
+  useEffect(() => {
+    const loadedResources = getCollection<Resource>('resources');
+    setResources(loadedResources);
+  }, []);
+  
   // Filter resources based on search query and selected category
-  const filteredResources = mockResources.filter(resource => {
+  const filteredResources = resources.filter(resource => {
     const matchesSearch = 
       resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       resource.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -88,23 +114,99 @@ const Resources: React.FC = () => {
     setNewResource(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleCreateResource = (e: React.FormEvent) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+  
+  const handleCreateResource = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!newResource.title || !newResource.description || !newResource.category) {
+    if (!newResource.title || !newResource.description || !newResource.category || !selectedFile) {
       toast.error('Please fill in all required fields');
       return;
     }
     
-    // In a real app, this would send data to an API and handle file upload
-    toast.success('Resource uploaded successfully!');
-    setResourceDialogOpen(false);
-    setNewResource({
-      title: '',
-      description: '',
-      category: '',
-      tags: '',
-    });
+    try {
+      // Get file extension for file type
+      const fileExtension = selectedFile.name.split('.').pop()?.toLowerCase() || '';
+      
+      // Create a base64 string from the file for "storage"
+      const fileReader = new FileReader();
+      fileReader.readAsDataURL(selectedFile);
+      
+      fileReader.onload = () => {
+        // Create the new resource
+        const newResourceData: Resource = {
+          id: generateId(),
+          title: newResource.title,
+          description: newResource.description,
+          category: newResource.category,
+          fileType: fileExtension,
+          fileName: selectedFile.name,
+          fileSize: selectedFile.size,
+          fileUrl: fileReader.result as string, // Store as base64
+          uploadedBy: user?.id || 'unknown',
+          uploadedAt: new Date().toISOString(),
+          rating: 0,
+          tags: newResource.tags ? newResource.tags.split(',').map(tag => tag.trim()) : [],
+          downloadCount: 0
+        };
+        
+        // Add to local storage
+        addItem('resources', newResourceData);
+        
+        // Update state
+        setResources(prev => [newResourceData, ...prev]);
+        
+        // Reset form
+        setNewResource({
+          title: '',
+          description: '',
+          category: '',
+          tags: '',
+        });
+        setSelectedFile(null);
+        
+        toast.success('Resource uploaded successfully!');
+        setResourceDialogOpen(false);
+      };
+    } catch (error) {
+      console.error('Error uploading resource:', error);
+      toast.error('Failed to upload resource');
+    }
+  };
+  
+  // Handle download of a resource
+  const handleDownload = (resource: Resource) => {
+    try {
+      if (resource.fileUrl) {
+        // Create a download link for the base64 file
+        const link = document.createElement('a');
+        link.href = resource.fileUrl;
+        link.download = resource.fileName || `${resource.title}.${resource.fileType}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Update download count in local state
+        const updatedResources = resources.map(r => 
+          r.id === resource.id ? { ...r, downloadCount: r.downloadCount + 1 } : r
+        );
+        setResources(updatedResources);
+        
+        // Update in localStorage
+        localStorage.setItem('collegium_resources', JSON.stringify(updatedResources));
+        
+        toast.success('Resource downloaded!');
+      } else {
+        toast.error('Resource file not available');
+      }
+    } catch (error) {
+      console.error('Error downloading resource:', error);
+      toast.error('Failed to download resource');
+    }
   };
   
   // Format date
@@ -251,10 +353,17 @@ const Resources: React.FC = () => {
                   id="file"
                   type="file"
                   className="cursor-pointer"
+                  onChange={handleFileChange}
+                  required
                 />
                 <p className="text-xs text-gray-500">
                   Accepted formats: PDF, DOCX, XLSX, PPT, ZIP (Max 50MB)
                 </p>
+                {selectedFile && (
+                  <p className="text-xs text-green-600">
+                    Selected: {selectedFile.name} ({(selectedFile.size / (1024 * 1024)).toFixed(2)} MB)
+                  </p>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -304,7 +413,7 @@ const Resources: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredResources.map(resource => {
-            const uploader = getUser(resource.uploadedBy);
+            const uploader = getUser(resource.uploadedBy) || { name: 'Unknown User' };
             
             return (
               <Card key={resource.id} className="card-hover overflow-hidden">
@@ -340,13 +449,13 @@ const Resources: React.FC = () => {
                 </CardContent>
                 <CardFooter className="p-4 flex justify-between items-center border-t">
                   <div className="text-xs text-gray-500">
-                    <p>Uploaded by {uploader?.name || 'Unknown'}</p>
+                    <p>Uploaded by {uploader.name}</p>
                     <p>{formatDate(resource.uploadedAt)}</p>
                   </div>
                   <Button 
                     size="sm" 
                     className="flex items-center"
-                    onClick={() => toast.success('Resource downloaded!')}
+                    onClick={() => handleDownload(resource)}
                   >
                     <Download className="h-4 w-4 mr-1" />
                     Download
