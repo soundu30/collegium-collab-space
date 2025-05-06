@@ -297,10 +297,15 @@ const MessagesPage: React.FC = () => {
                   conversations.map(conv => {
                     // Find the other participant (not current user)
                     const otherParticipantId = conv.participants.find(id => id !== user?.id);
-                    const otherUser = getUser(otherParticipantId || '') || { 
+                    const otherUser = getUser(otherParticipantId || '');
+                    
+                    // Create a compatible user object when otherUser is not found
+                    const displayUser = otherUser || { 
                       name: 'Unknown User',
                       id: 'unknown',
                       college: '',
+                      email: '',   // Add missing properties to match User interface
+                      major: '',   // Add missing properties to match User interface
                       avatar: ''
                     };
                     
@@ -308,19 +313,19 @@ const MessagesPage: React.FC = () => {
                       <button
                         key={conv.id}
                         className={`w-full px-3 py-3 flex items-center space-x-3 hover:bg-gray-50 transition-colors
-                          ${selectedUser?.id === otherUser.id ? 'bg-gray-50' : ''}`}
+                          ${selectedUser?.id === displayUser.id ? 'bg-gray-50' : ''}`}
                         onClick={() => {
-                          setSelectedUser(otherUser);
-                          loadMessages(otherUser.id);
+                          setSelectedUser(displayUser);
+                          loadMessages(displayUser.id);
                         }}
                       >
                         <Avatar>
-                          <AvatarImage src={otherUser.avatar} alt={otherUser.name} />
-                          <AvatarFallback>{getInitials(otherUser.name)}</AvatarFallback>
+                          <AvatarImage src={displayUser.avatar} alt={displayUser.name} />
+                          <AvatarFallback>{getInitials(displayUser.name)}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0 text-left">
                           <div className="flex items-center justify-between">
-                            <div className="font-medium truncate">{otherUser.name}</div>
+                            <div className="font-medium truncate">{displayUser.name}</div>
                             <div className="text-xs text-gray-500">{formatConversationTime(conv.lastMessageAt)}</div>
                           </div>
                           <div className="text-sm text-gray-500 truncate">{conv.lastMessage}</div>
